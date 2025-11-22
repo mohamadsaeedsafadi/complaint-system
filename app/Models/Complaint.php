@@ -10,8 +10,14 @@ class Complaint extends Model
     use HasFactory, SoftDeletes;
 
     protected $fillable = [
-        'reference_no','user_id','department_id','assigned_to','title','description','location','status'
+        'reference_no','user_id','department_id','assigned_to','title','description','location','status' ,'locked_by',
+    'locked_at'
     ];
+    
+    protected $casts = [
+    'locked_at' => 'datetime',
+];
+
 
     public function user() {
         return $this->belongsTo(User::class, 'user_id');

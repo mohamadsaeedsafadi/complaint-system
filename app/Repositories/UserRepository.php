@@ -31,7 +31,6 @@ class UserRepository
         return $user->delete();
     }
 
-    // 🔹 إحصائيات عامة
     public function countAll(): int
     {
         return User::count();
@@ -42,7 +41,6 @@ class UserRepository
         return User::where('role', $role)->count();
     }
 
-    // 🔹 تصدير البيانات لتقارير CSV/PDF
     public function getAllForExport(): array
     {
         return User::select('id','name','email','phone','role','created_at')

@@ -84,4 +84,11 @@ class AuthService
         }
         return $user;
     }
+
+    public function sendOtpByUserId(int $userId, string $method)
+{
+    $user = $this->users->findById($userId);
+    return $this->sendOtp($user, $method);
+}
+
 }

@@ -16,7 +16,6 @@ class AdminController extends Controller
         $this->admin = $admin;
     }
 
-    // إنشاء موظف
     public function createEmployee(Request $request)
     {
         $data = $request->validate([
@@ -31,7 +30,6 @@ class AdminController extends Controller
         return response()->json(['employee' => $employee], 201);
     }
 
-    // تعديل موظف
     public function updateEmployee(Request $request, $id)
     {
         $employee = User::where('role', 'employee')->findOrFail($id);
@@ -47,7 +45,6 @@ class AdminController extends Controller
         return response()->json(['employee' => $updated]);
     }
 
-    // حذف موظف
     public function deleteEmployee($id)
     {
         $employee = User::where('role', 'employee')->findOrFail($id);
@@ -56,7 +53,6 @@ class AdminController extends Controller
         return response()->json(['message' => 'تم حذف الموظف بنجاح']);
     }
 
-    // إنشاء مؤسسة
     public function createDepartment(Request $request)
     {
         $data = $request->validate([
@@ -69,7 +65,6 @@ class AdminController extends Controller
         return response()->json(['message' => 'تمت إضافة المؤسسة بنجاح', 'department' => $department], 201);
     }
 
-    // إنشاء أدمن جديد
     public function createAdmin(Request $request)
     {
         $data = $request->validate([
@@ -83,21 +78,18 @@ class AdminController extends Controller
         return response()->json(['message' => 'تمت إضافة الأدمن الجديد بنجاح', 'admin' => $admin], 201);
     }
 
-    // عرض لوحة المراقبة (Dashboard)
     public function dashboard()
     {
         $overview = $this->admin->getSystemOverview();
         return response()->json($overview);
     }
 
-    // عرض سجلات النشاط
     public function activityLogs(Request $request)
     {
         $logs = $this->admin->getActivityLogs($request->get('per_page', 20));
         return response()->json($logs);
     }
 
-    // تصدير CSV
     public function exportCsv(Request $request)
     {
         $request->validate(['type' => 'required|in:users,complaints,logs']);
@@ -105,7 +97,6 @@ class AdminController extends Controller
         return response()->json(['file_url' => $url]);
     }
 
-    // تصدير PDF
     public function exportPdf(Request $request)
     {
         $request->validate(['type' => 'required|in:users,complaints,logs']);

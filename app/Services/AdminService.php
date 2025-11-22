@@ -4,8 +4,8 @@ namespace App\Services;
 
 use App\Repositories\UserRepository;
 use App\Repositories\DepartmentRepository;
-use App\Repositories\ComplaintRepository;
 use App\Repositories\ActivityLogRepository;
+use App\Repositories\ComplaintRepository;
 use Barryvdh\DomPDF\Facade\Pdf as FacadePdf;
 use Barryvdh\DomPDF\PDF as DomPDFPDF;
 use Illuminate\Support\Facades\Hash;

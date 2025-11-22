@@ -21,6 +21,8 @@ return new class extends Migration
             $table->text('description')->nullable();
             $table->string('location')->nullable();
             $table->enum('status',['new','in_progress','resolved','rejected','closed'])->default('new');
+            $table->unsignedBigInteger('locked_by')->nullable();
+            $table->timestamp('locked_at')->nullable();
             $table->timestamps();
             $table->softDeletes();
         });

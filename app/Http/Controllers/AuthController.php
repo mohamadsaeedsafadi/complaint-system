@@ -3,7 +3,6 @@
 namespace App\Http\Controllers;
 
 use App\Services\AuthService;
-use App\Repositories\UserRepository;
 use Illuminate\Http\Request;
 use Illuminate\Validation\ValidationException;
 
@@ -11,7 +10,6 @@ class AuthController extends Controller
 {
     public function __construct(
         protected AuthService $auth,
-        protected UserRepository $users
     ) {}
 
     public function register(Request $request)
@@ -39,11 +37,11 @@ class AuthController extends Controller
             'method' => 'required|in:email,whatsapp',
         ]);
 
-        $user = $this->users->findById($data['user_id']);
-        $result = $this->auth->sendOtp($user, $data['method']);
+        $result = $this->auth->sendOtpByUserId($data['user_id'], $data['method']);
 
         return response()->json($result);
     }
+
 
     public function verifyOtp(Request $request)
     {
