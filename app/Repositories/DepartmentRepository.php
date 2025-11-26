@@ -9,4 +9,9 @@ class DepartmentRepository
     {
         return Department::create($data);
     }
+    public function getAll()
+{
+    return \App\Models\Department::select('id', 'name', 'code', 'description', 'created_at')->get();
+}
+
 }

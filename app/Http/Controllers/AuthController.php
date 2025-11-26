@@ -64,6 +64,18 @@ class AuthController extends Controller
 
         $user = $this->auth->login($request->phone, $request->password);
 
+        if ($user === 'locked') {
+        return response()->json([
+            'message' => 'تم قفل حسابك مؤقتًا. الرجاء الانتظار قبل المحاولة مرة أخرى.'
+        ], 423);
+    }
+
+    if ($user === 'wrong_password') {
+        return response()->json([
+            'message' => 'بيانات الدخول غير صحيحة.'
+        ], 401);
+    }
+
         if ($user === 'not_verified') {
             return response()->json(['message' => 'يرجى التحقق من حسابك أولاً.'], 403);
         }

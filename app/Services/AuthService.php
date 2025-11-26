@@ -75,15 +75,57 @@ class AuthService
     }
 
     public function login(string $phone, string $password)
-    {
-        $user = $this->users->findByPhone($phone);
-        if (! $user) return null;
-        if (! Hash::check($password, $user->password)) return null;
-        if (is_null($user->phone_verified_at) && is_null($user->email_verified_at)) {
-            return 'not_verified';
-        }
-        return $user;
+{
+    $user = $this->users->findByPhone($phone);
+    if (! $user) return null;
+
+    // 1) حساب مقفل
+    if ($user->locked_until && now()->lessThan($user->locked_until)) {
+        return 'locked';
     }
+
+    // 2) كلمة المرور غير صحيحة
+    if (! Hash::check($password, $user->password)) {
+
+        // زيادة المحاولات
+        $user->failed_attempts++;
+
+        // تحقق إذا تجاوز الحد
+        if ($user->failed_attempts >= 5) {
+
+            // قفل الحساب 10 دقائق
+            $user->locked_until = now()->addMinutes(10);
+            $user->save();
+
+            // إرسال إشعار عبر البريد
+            if ($user->email) {
+                Mail::raw(
+                    "تم قفل حسابك لمدة 10 دقائق بسبب محاولات غير صحيحة.",
+                    fn($msg) => $msg->to($user->email)->subject("تنبيه أمني | قفل الحساب")
+                );
+            }
+
+            return 'locked';
+        }
+
+        // حفظ عدد المحاولات
+        $user->save();
+        return 'wrong_password';
+    }
+
+    // 3) نجاح → إعادة الضبط
+    $user->failed_attempts = 0;
+    $user->locked_until = null;
+    $user->save();
+
+    // 4) تحقق من التفعيل
+    if (is_null($user->phone_verified_at) && is_null($user->email_verified_at)) {
+        return 'not_verified';
+    }
+
+    return $user;
+}
+
 
     public function sendOtpByUserId(int $userId, string $method)
 {

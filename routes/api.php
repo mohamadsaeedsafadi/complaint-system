@@ -4,6 +4,7 @@ use App\Http\Controllers\AdminController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\ComplaintController;
+use App\Http\Controllers\NotificationController;
 
 Route::post('/register', [AuthController::class,'register']);
 Route::post('/login', [AuthController::class,'login']);
@@ -26,7 +27,7 @@ Route::middleware('auth:sanctum')->group(function () {
 Route::middleware('auth:sanctum')->group(function () {
     Route::post('/logout', [AuthController::class,'logout']);
 
-    // مواطن
+    
     Route::middleware('role:citizen')->group(function () {
         Route::post('/complaints', [ComplaintController::class,'store']);
         Route::get('/my-complaints', [ComplaintController::class,'myComplaints']);
@@ -56,4 +57,20 @@ Route::get('/admin/dashboard', [AdminController::class, 'dashboard']);
     
 });
 });
+
+Route::middleware('auth:sanctum')->group(function () {
+    
+    Route::get('/notifications', [NotificationController::class, 'index']);
+    Route::get('/notifications/unread-count', [NotificationController::class, 'unreadCount']);
+    Route::patch('/notifications/{id}/read', [NotificationController::class, 'markAsRead']);
+});
+
+Route::middleware(['auth:sanctum', 'role:admin'])->group(function () {
+
+    Route::get('/admin/departments', [AdminController::class, 'listDepartments']);
+    Route::get('/admin/employees', [AdminController::class, 'listEmployees']);
+
+});
+
+
 

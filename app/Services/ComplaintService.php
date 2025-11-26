@@ -12,7 +12,10 @@ use Illuminate\Support\Arr;
 
 class ComplaintService
 {
-    public function __construct(protected ComplaintRepository $repo) {}
+    
+    public function __construct(protected ComplaintRepository $repo ,  protected ComplaintRepository $complaints,
+    protected InAppNotificationService $inAppNotifier ) {
+    }
 
     public function createComplaint(Request $request, array $data): Complaint
     {
@@ -78,6 +81,15 @@ class ComplaintService
         'changed_by' => $user->id,
         'note' => $note
     ]);
+    
+    $this->inAppNotifier->notify(
+    $complaint->user,
+    "تغيير حالة الشكوى",
+    "تم تغيير حالة شكواك رقم {$complaint->reference_no} إلى {$newStatus}",
+    Complaint::class,
+    $complaint->id
+);
+
 
         return $complaint->fresh();
     }

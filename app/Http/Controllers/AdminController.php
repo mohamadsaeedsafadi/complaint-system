@@ -103,4 +103,17 @@ class AdminController extends Controller
         $url = $this->admin->exportPdf($request->type);
         return response()->json(['file_url' => $url]);
     }
+
+    public function listDepartments()
+{
+    $departments = $this->admin->listDepartments();
+    return response()->json(['departments' => $departments]);
+}
+
+public function listEmployees()
+{
+    $employees = $this->admin->listEmployees();
+    return response()->json(['employees' => $employees]);
+}
+
 }

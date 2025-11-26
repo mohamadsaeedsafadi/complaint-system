@@ -118,4 +118,14 @@ class AdminService
             default => [],
         };
     }
+    public function listDepartments()
+{
+    return $this->departments->getAll();
+}
+
+public function listEmployees()
+{
+    return $this->users->getEmployees();
+}
+
 }

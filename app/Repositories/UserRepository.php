@@ -48,4 +48,30 @@ class UserRepository
         ->get()
         ->toArray();
     }
+
+    public function incrementFailedAttempts(User $user)
+{
+    $user->failed_attempts++;
+    $user->save();
+}
+
+public function resetFailedAttempts(User $user)
+{
+    $user->failed_attempts = 0;
+    $user->save();
+}
+
+public function lockUser(User $user, int $minutes)
+{
+    $user->locked_until = now()->addMinutes($minutes);
+    $user->save();
+}
+public function getEmployees()
+{
+    return \App\Models\User::where('role', 'employee')
+        ->select('id','name','email','phone','department_id','created_at')
+        ->with('department:id,name')
+        ->get();
+}
+
 }

@@ -5,12 +5,15 @@ namespace App\Services;
 use App\Repositories\ComplaintMessageRepository;
 use App\Models\Complaint;
 use App\Models\ActivityLog;
+use App\Repositories\ComplaintRepository;
 use Illuminate\Http\Request;
 
 class ComplaintMessageService
 {
     public function __construct(
-        protected ComplaintMessageRepository $repo
+        protected ComplaintMessageRepository $repo ,
+        protected ComplaintRepository $complaints,
+    protected InAppNotificationService $inAppNotifier 
     ) {}
 
     public function employeeRequest(Request $request, Complaint $complaint)
@@ -48,6 +51,14 @@ class ComplaintMessageService
             'request_payload' => ['complaint_id'=>$complaint->id, 'message'=>$request->message],
             'response_status' => 200
         ]);
+
+        $this->inAppNotifier->notify(
+    $complaint->user,
+    "طلب معلومات إضافية",
+    "يرجى تزويدنا بمعلومات إضافية للشكوى رقم {$complaint->reference_no}",
+    Complaint::class,
+    $complaint->id
+);
 
         return $msg;
     }
