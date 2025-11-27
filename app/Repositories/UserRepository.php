@@ -73,5 +73,9 @@ public function getEmployees()
         ->with('department:id,name')
         ->get();
 }
-
+public function update(User $user, array $data): User
+{
+    $user->update($data);
+    return $user;
+}
 }

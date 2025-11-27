@@ -4,6 +4,7 @@ use App\Http\Controllers\AdminController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\ComplaintController;
+use App\Http\Controllers\EmployeeVerificationController;
 use App\Http\Controllers\NotificationController;
 
 Route::post('/register', [AuthController::class,'register']);
@@ -71,6 +72,11 @@ Route::middleware(['auth:sanctum', 'role:admin'])->group(function () {
     Route::get('/admin/employees', [AdminController::class, 'listEmployees']);
 
 });
+
+
+    Route::post('/sendotpforemp', [AuthController::class, 'employeeSendOtp']);
+
+
 
 
 

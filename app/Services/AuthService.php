@@ -12,7 +12,8 @@ class AuthService
 {
     public function __construct(
         protected UserRepository $users,
-        protected OtpRepository $otps
+        protected OtpRepository $otps,
+       protected OtpSenderService $otpSender
     ) {}
 
     public function register(array $data): User
@@ -79,25 +80,19 @@ class AuthService
     $user = $this->users->findByPhone($phone);
     if (! $user) return null;
 
-    // 1) حساب مقفل
     if ($user->locked_until && now()->lessThan($user->locked_until)) {
         return 'locked';
     }
 
-    // 2) كلمة المرور غير صحيحة
     if (! Hash::check($password, $user->password)) {
 
-        // زيادة المحاولات
         $user->failed_attempts++;
 
-        // تحقق إذا تجاوز الحد
         if ($user->failed_attempts >= 5) {
 
-            // قفل الحساب 10 دقائق
             $user->locked_until = now()->addMinutes(10);
             $user->save();
 
-            // إرسال إشعار عبر البريد
             if ($user->email) {
                 Mail::raw(
                     "تم قفل حسابك لمدة 10 دقائق بسبب محاولات غير صحيحة.",
@@ -108,17 +103,14 @@ class AuthService
             return 'locked';
         }
 
-        // حفظ عدد المحاولات
         $user->save();
         return 'wrong_password';
     }
 
-    // 3) نجاح → إعادة الضبط
     $user->failed_attempts = 0;
     $user->locked_until = null;
     $user->save();
 
-    // 4) تحقق من التفعيل
     if (is_null($user->phone_verified_at) && is_null($user->email_verified_at)) {
         return 'not_verified';
     }
@@ -132,5 +124,74 @@ class AuthService
     $user = $this->users->findById($userId);
     return $this->sendOtp($user, $method);
 }
+
+public function chooseVerificationMethod(User $user, string $method, string $value)
+    {
+        if ($method === 'email') {
+            $this->users->update($user, ['email' => $value]);
+        } else {
+            $this->users->update($user, ['phone' => $value]);
+        }
+
+        return true;
+    }
+
+public function sendOtpForEmployee(User $user, string $method, string $value): array
+{
+    $this->otps->deleteByUser($user->id);
+
+    if ($method === 'email') {
+        $user->email = $value;
+    } else {
+        $user->phone = preg_replace('/[^0-9]/', '', $value);
+    }
+    $user->save();
+
+    $code = rand(100000, 999999);
+
+    $this->otps->create([
+        'user_id'    => $user->id,
+        'method'     => $method,
+        'contact'    => $value,
+        'code'       => $code,
+        'expires_at' => now()->addMinutes(5),
+    ]);
+
+    if ($method === 'email') {
+        Mail::raw("رمز التحقق الخاص بك هو: $code", function ($msg) use ($value) {
+            $msg->to($value)->subject("رمز التحقق للموظف");
+        });
+
+        return [
+            'message' => 'تم إرسال الرمز إلى البريد الإلكتروني.',
+            'debug_code' => $code
+        ];
+    }
+
+    $cleanPhone = preg_replace('/[^0-9]/', '', $value);
+    $url = "https://wa.me/$cleanPhone?text=" . urlencode("رمز التحقق الخاص بك هو: $code");
+
+    return [
+        'message' => 'تم إنشاء رابط واتساب لإرسال الرمز.',
+        'link'    => $url,
+        'debug_code' => $code
+    ];
+}
+
+public function sendOtpToExistingUser(int $userId, string $method): array
+{
+    $user = $this->users->findById($userId);
+
+    if (! $user) {
+        throw new \Exception("User not found");
+    }
+
+    if ($method === 'email' && empty($user->email)) {
+        throw new \Exception("User does not have an email");
+    }
+
+    return $this->otpSender->sendOtp($user, $method);
+}
+
 
 }

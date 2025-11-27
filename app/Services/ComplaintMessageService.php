@@ -41,7 +41,6 @@ class ComplaintMessageService
             'type' => 'employee_request'
         ]);
 
-        // AOP - Activity Log
         ActivityLog::create([
             'user_id' => $user->id,
             'action' => 'employee_request_more_info',

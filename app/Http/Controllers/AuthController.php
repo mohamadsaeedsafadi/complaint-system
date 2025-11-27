@@ -19,7 +19,7 @@ class AuthController extends Controller
             'email' => 'nullable|email|unique:users',
             'phone' => 'required|unique:users',
             'password' => 'required|min:6',
-            'role' => 'in:citizen,employee,admin',
+            'role' => 'in:citizen,admin',
         ]);
 
         $user = $this->auth->register($data);
@@ -93,4 +93,31 @@ class AuthController extends Controller
         $request->user()->currentAccessToken()->delete();
         return response()->json(['message' => 'تم تسجيل الخروج.']);
     }
+
+  public function employeeSendOtp(Request $request)
+{
+    $data = $request->validate([
+        'phone'  => 'required|exists:users,phone',
+        'method' => 'required|in:email,whatsapp',
+        'value'  => 'required|string'
+    ]);
+
+    $user = \App\Models\User::where('phone', $data['phone'])->first();
+    $userid = \App\Models\User::where('phone', $data['phone'])->get('id');
+
+    if (!$user || $user->role !== 'employee') {
+        return response()->json(['message' => 'الحساب غير صالح أو ليس موظفاً.'], 403);
+    }
+
+    $result = $this->auth->sendOtpForEmployee(
+        $user,
+        $data['method'],
+        $data['value'],
+        
+    );
+
+    return response()->json([$result,$userid]);
+}
+
+
 }
