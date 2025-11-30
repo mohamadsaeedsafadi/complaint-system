@@ -20,6 +20,8 @@ return new class extends Migration
             $table->enum('role', ['citizen','employee','admin'])->default('citizen');
             $table->foreignId('department_id')->nullable()->constrained()->nullOnDelete();
             $table->timestamp('phone_verified_at')->nullable();
+            $table->integer('failed_attempts')->default(0);
+            $table->timestamp('locked_until')->nullable();
             $table->rememberToken();
             $table->timestamps();
         });
