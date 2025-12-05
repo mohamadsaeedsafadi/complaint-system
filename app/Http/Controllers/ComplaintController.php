@@ -150,4 +150,9 @@ class ComplaintController extends Controller
             'description' => $complaint->description,
         ]);
     }
+       public function listDepartments()
+{
+    $departments = $this->service->listDepartments();
+    return response()->json(['departments' => $departments]);
+}
 }

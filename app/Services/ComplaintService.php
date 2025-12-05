@@ -6,6 +6,8 @@ use App\Models\Complaint;
 use App\Models\ComplaintStatusHistory;
 use App\Models\ActivityLog;
 use App\Models\User;
+use App\Repositories\ActivityLogRepository;
+use App\Repositories\DepartmentRepository;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Arr;
@@ -13,8 +15,25 @@ use Illuminate\Support\Arr;
 class ComplaintService
 {
     
-    public function __construct(protected ComplaintRepository $repo ,  protected ComplaintRepository $complaints,
-    protected InAppNotificationService $inAppNotifier ) {
+    public function __construct(protected ComplaintRepository $repo
+     ,  protected ComplaintRepository $complaints,
+protected ActivityLogRepository $logs,
+    protected InAppNotificationService $inAppNotifier ,
+     protected DepartmentRepository $departments,
+    ) {
+    }
+
+    protected function logAction(string $action, array $details = [], ?int $userId = null)
+    {
+        $this->logs->create([
+            'user_id' => $userId,
+            'action' => $action,
+            'route' => request()->path(),
+            'method' => request()->method(),
+            'ip' => request()->ip(),
+            'request_payload' => $details,
+            'response_status' => 200,
+        ]);
     }
 
     public function createComplaint(Request $request, array $data): Complaint
@@ -43,16 +62,7 @@ class ComplaintService
             }
         }
 
-        ActivityLog::create([
-            'user_id' => $request->user()->id,
-            'action' => 'create_complaint',
-            'route' => $request->path(),
-            'method' => $request->method(),
-            'ip' => $request->ip(),
-            'request_payload' => $this->sanitizeForLog($payload),
-            'response_status' => 201,
-            'duration_ms' => null,
-        ]);
+        $this->logAction('create_complaint', $this->sanitizeForLog($payload), $request->user()->id);
 
         return $complaint->fresh();
     }
@@ -90,7 +100,11 @@ class ComplaintService
     $complaint->id
 );
 
-
+$this->logAction(
+            'update_complaint_status',
+            ['complaint_id' => $complaint->id, 'from' => $from, 'to' => $newStatus],
+            $user->id
+        );
         return $complaint->fresh();
     }
 
@@ -117,16 +131,7 @@ class ComplaintService
             'note' => "assigned_to: {$employee->id}"
         ]);
 
-        ActivityLog::create([
-            'user_id' => $request->user()->id,
-            'action' => 'assign_complaint',
-            'route' => $request->path(),
-            'method' => $request->method(),
-            'ip' => $request->ip(),
-            'request_payload' => ['old_assigned'=>$old,'new_assigned'=>$employee->id,'complaint_id'=>$complaint->id],
-            'response_status' => 200,
-            'duration_ms' => null,
-        ]);
+        
 
         return $complaint->fresh();
     }
@@ -165,6 +170,11 @@ public function unlockComplaint(Complaint $complaint, User $user)
         $complaint->locked_at = null;
         $complaint->save();
     }
+}
+ public function listDepartments()
+{
+    $this->logAction('list_departments');
+    return $this->departments->getAll();
 }
 
 }

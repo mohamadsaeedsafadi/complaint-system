@@ -90,12 +90,12 @@ class AuthService
 
         if ($user->failed_attempts >= 5) {
 
-            $user->locked_until = now()->addMinutes(10);
+            $user->locked_until = now()->addMinutes(3);
             $user->save();
 
             if ($user->email) {
                 Mail::raw(
-                    "تم قفل حسابك لمدة 10 دقائق بسبب محاولات غير صحيحة.",
+                    "تم قفل حسابك لمدة 3 دقائق بسبب محاولات غير صحيحة.",
                     fn($msg) => $msg->to($user->email)->subject("تنبيه أمني | قفل الحساب")
                 );
             }

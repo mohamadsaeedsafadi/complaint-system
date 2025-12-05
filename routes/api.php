@@ -76,7 +76,11 @@ Route::middleware(['auth:sanctum', 'role:admin'])->group(function () {
 
     Route::post('/sendotpforemp', [AuthController::class, 'employeeSendOtp']);
 
+Route::middleware(['auth:sanctum', 'role:citizen'])->group(function () {
 
+    Route::get('/departments', [ComplaintController::class, 'listDepartments']);
+
+});
 
 
 

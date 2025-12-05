@@ -10,11 +10,13 @@ use Illuminate\Http\Request;
 
 class ComplaintMessageService
 {
-    public function __construct(
-        protected ComplaintMessageRepository $repo ,
-        protected ComplaintRepository $complaints,
-    protected InAppNotificationService $inAppNotifier 
-    ) {}
+   public function __construct(
+    protected ComplaintMessageRepository $repo,
+    protected ComplaintRepository $complaints,
+    protected InAppNotificationService $inAppNotifier,
+    protected ActivityLoggerService $activityLogger
+) {}
+
 
     public function employeeRequest(Request $request, Complaint $complaint)
     {
@@ -41,15 +43,7 @@ class ComplaintMessageService
             'type' => 'employee_request'
         ]);
 
-        ActivityLog::create([
-            'user_id' => $user->id,
-            'action' => 'employee_request_more_info',
-            'route' => $request->path(),
-            'method' => $request->method(),
-            'ip' => $request->ip(),
-            'request_payload' => ['complaint_id'=>$complaint->id, 'message'=>$request->message],
-            'response_status' => 200
-        ]);
+       
 
         $this->inAppNotifier->notify(
     $complaint->user,
@@ -58,6 +52,16 @@ class ComplaintMessageService
     Complaint::class,
     $complaint->id
 );
+ $this->activityLogger->log($user->id, 'employee_request_more_info', [
+        'route' => $request->path(),
+        'method' => $request->method(),
+        'ip' => $request->ip(),
+        'request_payload' => [
+            'complaint_id' => $complaint->id,
+            'message' => $request->message
+        ],
+        'response_status' => 200
+    ]);
 
         return $msg;
     }
@@ -87,15 +91,16 @@ class ComplaintMessageService
             'type' => 'citizen_reply'
         ]);
 
-        ActivityLog::create([
-            'user_id' => $user->id,
-            'action' => 'citizen_reply',
-            'route' => $request->path(),
-            'method' => $request->method(),
-            'ip' => $request->ip(),
-            'request_payload' => ['complaint_id'=>$complaint->id, 'message'=>$request->message],
-            'response_status' => 200
-        ]);
+         $this->activityLogger->log($user->id, 'citizen_reply', [
+        'route' => $request->path(),
+        'method' => $request->method(),
+        'ip' => $request->ip(),
+        'request_payload' => [
+            'complaint_id' => $complaint->id,
+            'message' => $request->message
+        ],
+        'response_status' => 200
+    ]);
 
         return $msg;
     }
