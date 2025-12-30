@@ -6,92 +6,134 @@ use Closure;
 use Illuminate\Support\Facades\Log;
 use App\Repositories\ActivityLogRepository;
 use Illuminate\Support\Arr;
+use Throwable;
 
 class LogRequestMiddleware
 {
-    protected ActivityLogRepository $activityRepo;
-
-    public function __construct(ActivityLogRepository $activityRepo)
-    {
-        $this->activityRepo = $activityRepo;
-    }
+    public function __construct(
+        protected ActivityLogRepository $activityRepo
+    ) {}
 
     public function handle($request, Closure $next)
     {
-        $start = microtime(true);
+        /** ===============================
+         * BEFORE (Before Advice)
+         * =============================== */
+        $startTime = microtime(true);
 
-        
-        $userId = optional($request->user())->id;
-        $route = $request->path();
-        $method = $request->method();
-        $ip = $request->ip();
+        $context = [
+            'user_id' => optional($request->user())->id,
+            'route' => $request->path(),
+            'method' => $request->method(),
+            'ip' => $request->ip(),
+            'request_payload' => $this->sanitizePayload(
+                $request->except([
+                    'password',
+                    'password_confirmation',
+                    'current_password',
+                    'file',
+                    'files',
+                    'attachments',
+                    'attachment',
+                ])
+            ),
+        ];
 
-        
-        $payload = $request->except(['password', 'password_confirmation', 'current_password', 'file', 'attachments', 'attachment']);
-        
-
-        $response = $next($request);
-
-        $duration = (int) round((microtime(true) - $start) * 1000);
-
-        $status = $response->getStatusCode();
-
-    
-        Log::info('API Request', [
-            'user_id' => $userId,
-            'route' => $route,
-            'method' => $method,
-            'ip' => $ip,
-            'status' => $status,
-            'duration_ms' => $duration,
-        ]);
-
-        
         try {
-            $this->activityRepo->create([
-                'user_id' => $userId,
-                'action' => $this->guessAction($request),
-                'route' => $route,
-                'method' => $method,
-                'ip' => $ip,
-                'request_payload' => $this->sanitizePayload($payload),
-                'response_status' => $status,
-                'duration_ms' => $duration,
-            ]);
-        } catch (\Throwable $e) {
-            
-            Log::error('Failed to create activity log: '.$e->getMessage());
-        }
+            /** ===============================
+             * PROCEED (Around Advice)
+             * =============================== */
+            $response = $next($request);
 
-        return $response;
+            /** ===============================
+             * AFTER RETURNING (Success)
+             * =============================== */
+            $this->logSuccess($context, $response, $startTime);
+
+            return $response;
+
+        } catch (Throwable $e) {
+
+            /** ===============================
+             * AFTER THROWING (Exception)
+             * =============================== */
+            $this->logException($context, $e, $startTime);
+
+            throw $e;
+        }
     }
 
-    
-    protected function guessAction($request): string
+    /** ===============================
+     * AFTER RETURNING
+     * =============================== */
+    protected function logSuccess(array $context, $response, float $startTime): void
     {
-        
-        $method = $request->method();
-        $path = $request->path();
+        $duration = (int) ((microtime(true) - $startTime) * 1000);
 
-        if (stripos($path, 'login') !== false) return 'login';
-        if (stripos($path, 'register') !== false) return 'register';
-        if (stripos($path, 'send-otp') !== false || stripos($path, 'otp') !== false) return 'send_otp';
-        if ($method === 'POST') return 'create';
-        if ($method === 'PATCH' || $method === 'PUT') return 'update';
-        if ($method === 'DELETE') return 'delete';
-        return strtolower($method).'_'.str_replace('/', '_', $path);
+        $this->activityRepo->create([
+            'user_id' => $context['user_id'],
+            'action' => $this->guessAction(
+                $context['method'],
+                $context['route']
+            ),
+            'route' => $context['route'],
+            'method' => $context['method'],
+            'ip' => $context['ip'],
+            'request_payload' => $context['request_payload'],
+            'response_status' => $response->getStatusCode(),
+            'duration_ms' => $duration,
+        ]);
+    }
+
+    /** ===============================
+     * AFTER THROWING
+     * =============================== */
+    protected function logException(array $context, Throwable $e, float $startTime): void
+    {
+        $duration = (int) ((microtime(true) - $startTime) * 1000);
+
+        Log::error('API Exception', [
+            'exception' => $e->getMessage(),
+            'route' => $context['route'],
+            'method' => $context['method'],
+        ]);
+
+        $this->activityRepo->create([
+            'user_id' => $context['user_id'],
+            'action' => 'exception',
+            'route' => $context['route'],
+            'method' => $context['method'],
+            'ip' => $context['ip'],
+            'request_payload' => $context['request_payload'],
+            'response_status' => 500,
+            'duration_ms' => $duration,
+        ]);
+    }
+
+    protected function guessAction(string $method, string $path): string
+    {
+        if (str_contains($path, 'login')) return 'login';
+        if (str_contains($path, 'register')) return 'register';
+        if (str_contains($path, 'otp')) return 'otp';
+
+        return match ($method) {
+            'POST' => 'create',
+            'PUT', 'PATCH' => 'update',
+            'DELETE' => 'delete',
+            default => 'read',
+        };
     }
 
     protected function sanitizePayload(array $payload): array
     {
-    
         $clean = Arr::except($payload, ['large_text', 'long_description']);
-        
-        array_walk_recursive($clean, function (&$v, $k) {
-            if (is_string($v) && strlen($v) > 1000) {
-                $v = substr($v, 0, 1000) . '...';
+
+        array_walk_recursive($clean, function (&$value) {
+            if (is_string($value) && strlen($value) > 1000) {
+                $value = substr($value, 0, 1000) . '...';
             }
         });
+
         return $clean;
     }
 }
