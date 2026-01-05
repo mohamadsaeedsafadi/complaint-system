@@ -151,7 +151,7 @@ $this->logAction(
     if ($complaint->locked_by 
         && $complaint->locked_by != $user->id 
         && $complaint->locked_at 
-        && $complaint->locked_at->diffInMinutes(now()) < 5) {
+        && $complaint->locked_at->diffInMinutes(now()) < 3) {
 
         return false; 
     }
