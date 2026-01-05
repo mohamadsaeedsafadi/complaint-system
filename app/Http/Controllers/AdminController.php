@@ -6,6 +6,7 @@ use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 use App\Models\User;
 use App\Services\AdminService;
+use Illuminate\Support\Facades\Cache;
 
 class AdminController extends Controller
 {
@@ -62,6 +63,7 @@ class AdminController extends Controller
         ]);
 
         $department = $this->admin->createDepartment($data);
+        
         return response()->json(['message' => 'تمت إضافة المؤسسة بنجاح', 'department' => $department], 201);
     }
 

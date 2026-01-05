@@ -7,6 +7,7 @@ class ActivityLogRepository
 {
     public function create(array $data): ActivityLog
     {
+        
         return ActivityLog::create($data);
     }
 
